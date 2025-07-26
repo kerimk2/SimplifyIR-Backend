@@ -1,0 +1,11 @@
+# Environment variables (never commit these!)
+.env
+
+# Dependencies
+node_modules/
+
+# Uploads folder (temporary files)
+uploads/
+
+# OS files
+.DS_Store
