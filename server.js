@@ -24,6 +24,13 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+console.log('🔍 Pinecone Configuration Debug:');
+console.log('API Key exists:', !!process.env.PINECONE_API_KEY);
+console.log('API Key first 10 chars:', process.env.PINECONE_API_KEY?.substring(0, 10));
+console.log('Environment:', process.env.PINECONE_ENVIRONMENT);
+console.log('Project ID:', process.env.PINECONE_PROJECT_ID);
+console.log('Project ID exists:', !!process.env.PINECONE_PROJECT_ID);
+
 const pinecone = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY,
   environment: process.env.PINECONE_ENVIRONMENT,
