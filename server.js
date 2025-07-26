@@ -26,13 +26,16 @@ const openai = new OpenAI({
 
 console.log('🔍 Pinecone Configuration Debug:');
 console.log('API Key exists:', !!process.env.PINECONE_API_KEY);
+console.log('Environment:', process.env.PINECONE_ENVIRONMENT);
+console.log('Project ID:', process.env.PINECONE_PROJECT_ID);
 
 const pinecone = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY,
-  // No environment parameter for serverless indexes
+  environment: process.env.PINECONE_ENVIRONMENT,
+  projectId: process.env.PINECONE_PROJECT_ID,
 });
 
-console.log('✅ Pinecone client created for serverless index');
+console.log('✅ Pinecone client created with all parameters');
 
 let index;
 
