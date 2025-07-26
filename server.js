@@ -34,7 +34,6 @@ console.log('Project ID exists:', !!process.env.PINECONE_PROJECT_ID);
 const pinecone = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY,
   environment: process.env.PINECONE_ENVIRONMENT,
-  projectId: process.env.PINECONE_PROJECT_ID,
 });
 
 let index;
