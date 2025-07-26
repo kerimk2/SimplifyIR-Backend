@@ -27,15 +27,14 @@ const openai = new OpenAI({
 console.log('🔍 Pinecone Configuration Debug:');
 console.log('API Key exists:', !!process.env.PINECONE_API_KEY);
 console.log('Environment:', process.env.PINECONE_ENVIRONMENT);
-console.log('Project ID:', process.env.PINECONE_PROJECT_ID);
 
 const pinecone = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY,
   environment: process.env.PINECONE_ENVIRONMENT,
-  projectId: process.env.PINECONE_PROJECT_ID,
+  // Completely remove projectId to stop auto-hostname generation
 });
 
-console.log('✅ Pinecone client created with all parameters');
+console.log('✅ Pinecone client created without projectId');
 
 let index;
 
@@ -75,9 +74,8 @@ const upload = multer({
 // Initialize Pinecone connection
 async function initializePinecone() {
   try {
-    // For serverless indexes, specify the exact hostname from Pinecone dashboard
-    index = pinecone.Index('simplifyir', 'https://simplifyir-4ckub9f.svc.aped-4627-b74a.pinecone.io');
-    console.log('✅ Connected to Pinecone serverless index with explicit hostname');
+    index = pinecone.Index('simplifyir');
+    console.log('✅ Connected to Pinecone index: simplifyir');
   } catch (error) {
     console.error('❌ Failed to connect to Pinecone:', error);
     process.exit(1);
