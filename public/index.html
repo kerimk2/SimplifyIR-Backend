@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimplifyIR - Document Upload Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .upload-zone {
+            border: 2px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .upload-zone:hover {
+            border-color: #5a6fd8;
+            background: #f0f2ff;
+        }
+
+        .upload-zone.dragover {
+            border-color: #4c63d2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-list {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .file-name {
+            font-size: 0.9rem;
+            color: #333;
+            flex: 1;
+        }
+
+        .file-size {
+            font-size: 0.8rem;
+            color: #666;
+            margin-right: 10px;
+        }
+
+        .remove-file {
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .progress-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e1e5e9;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .result-container {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .file-count {
+            font-size: 0.9rem;
+            color: #667eea;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SimplifyIR</h1>
+            <p>Multi-Document Upload Portal</p>
+        </div>
+
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="company">Company Ticker Symbol:</label>
+                <input type="text" id="company" name="company" placeholder="e.g., CRWV, AAPL, TSLA" required>
+            </div>
+
+            <div class="form-group">
+                <label for="documentType">Document Type:</label>
+                <select id="documentType" name="documentType">
+                    <option value="earnings-call">Earnings Call Transcript</option>
+                    <option value="earnings-presentation">Earnings Presentation</option>
+                    <option value="investor-deck">Investor Deck</option>
+                    <option value="analyst-report">Analyst Report</option>
+                    <option value="press-release">Press Release</option>
+                    <option value="internal-memo">Internal Memo</option>
+                    <option value="board-presentation">Board Presentation</option>
+                    <option value="strategic-plan">Strategic Plan</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description (Optional):</label>
+                <textarea id="description" name="description" rows="3" placeholder="Brief description of the documents..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Upload Documents (Multiple files supported):</label>
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">Drop files here or click to browse</div>
+                    <div class="upload-subtext">Supports PDF, DOCX, DOC, TXT files (Max 50MB each)</div>
+                    <input type="file" id="fileInput" name="documents" multiple accept=".pdf,.docx,.doc,.txt">
+                </div>
+                
+                <div class="file-list" id="fileList"></div>
+                <div class="file-count" id="fileCount"></div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn" disabled>
+                Upload Documents
+            </button>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Uploading...</div>
+            </div>
+
+            <div class="result-container" id="resultContainer"></div>
+        </form>
+    </div>
+
+    <script>
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const fileCount = document.getElementById('fileCount');
+        const submitBtn = document.getElementById('submitBtn');
+        const form = document.getElementById('uploadForm');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const resultContainer = document.getElementById('resultContainer');
+
+        let selectedFiles = [];
+
+        // Upload zone click
+        uploadZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Drag and drop handlers
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            for (let file of files) {
+                if (validateFile(file)) {
+                    selectedFiles.push(file);
+                }
+            }
+            updateFileList();
+            updateSubmitButton();
+        }
+
+        function validateFile(file) {
+            const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword', 'text/plain'];
+            const maxSize = 50 * 1024 * 1024; // 50MB
+
+            if (!allowedTypes.includes(file.type)) {
+                alert(`File type not supported: ${file.name}`);
+                return false;
+            }
+
+            if (file.size > maxSize) {
+                alert(`File too large: ${file.name} (Max 50MB)`);
+                return false;
+            }
+
+            return true;
+        }
+
+        function updateFileList() {
+            fileList.innerHTML = '';
+            
+            selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                fileItem.innerHTML = `
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-size">${formatFileSize(file.size)}</span>
+                    <button type="button" class="remove-file" onclick="removeFile(${index})">Remove</button>
+                `;
+                
+                fileList.appendChild(fileItem);
+            });
+
+            const count = selectedFiles.length;
+            fileCount.textContent = count > 0 ? `${count} file${count !== 1 ? 's' : ''} selected` : '';
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+            updateSubmitButton();
+        }
+
+        function updateSubmitButton() {
+            submitBtn.disabled = selectedFiles.length === 0;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (selectedFiles.length === 0) {
+                alert('Please select at least one file to upload.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('company', document.getElementById('company').value);
+            formData.append('documentType', document.getElementById('documentType').value);
+            formData.append('description', document.getElementById('description').value);
+
+            selectedFiles.forEach(file => {
+                formData.append('documents', file);
+            });
+
+            // Show progress
+            progressContainer.style.display = 'block';
+            resultContainer.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+
+            try {
+                const response = await fetch('/api/upload-documents', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                // Hide progress
+                progressContainer.style.display = 'none';
+                
+                // Show result
+                resultContainer.style.display = 'block';
+                
+                if (response.ok && result.success) {
+                    resultContainer.className = 'result-container result-success';
+                    resultContainer.innerHTML = `
+                        <h3>✅ Upload Successful!</h3>
+                        <p><strong>Company:</strong> ${result.company}</p>
+                        <p><strong>Files Processed:</strong> ${result.summary.successfulFiles}/${result.summary.totalFiles}</p>
+                        <p><strong>Total Chunks:</strong> ${result.summary.totalChunksProcessed}</p>
+                        ${result.errors ? `<p><strong>Errors:</strong> ${result.errors.length} files failed</p>` : ''}
+                        <p style="margin-top: 15px;">Documents are now available for AI queries!</p>
+                    `;
+
+                    // Reset form
+                    setTimeout(() => {
+                        selectedFiles = [];
+                        updateFileList();
+                        form.reset();
+                        updateSubmitButton();
+                    }, 3000);
+                } else {
+                    throw new Error(result.message || 'Upload failed');
+                }
+
+            } catch (error) {
+                progressContainer.style.display = 'none';
+                resultContainer.style.display = 'block';
+                resultContainer.className = 'result-container result-error';
+                resultContainer.innerHTML = `
+                    <h3>❌ Upload Failed</h3>
+                    <p>${error.message}</p>
+                `;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Upload Documents';
+            }
+        });
+
+        // Simulate progress (since we can't track real progress easily)
+        function simulateProgress() {
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress >= 95) {
+                    progress = 95;
+                    clearInterval(interval);
+                }
+                progressFill.style.width = progress + '%';
+                progressText.textContent = `Processing documents... ${Math.round(progress)}%`;
+            }, 200);
+        }
+
+        // Start progress simulation when form is submitted
+        form.addEventListener('submit', () => {
+            setTimeout(simulateProgress, 100);
+        });
+    </script>
+</body>
+</html>

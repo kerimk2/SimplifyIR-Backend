@@ -1,0 +1,320 @@
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const OpenAI = require('openai');
+const { Pinecone } = require('@pinecone-database/pinecone');
+
+// Initialize Express app
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Initialize APIs
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+const pinecone = new Pinecone({
+  apiKey: process.env.PINECONE_API_KEY,
+});
+
+let index;
+
+// Initialize Pinecone connection
+async function initializePinecone() {
+  try {
+    index = pinecone.Index('simplifyir');
+    console.log('✅ Connected to Pinecone index: simplifyir');
+  } catch (error) {
+    console.error('❌ Failed to connect to Pinecone:', error);
+    process.exit(1);
+  }
+}
+
+// Query Intelligence Class
+class QueryIntelligence {
+  constructor() {
+    this.financialTerms = {
+      revenue: ['revenue', 'sales', 'income', 'total revenue', 'net revenue', 'total sales', 'top line'],
+      profit: ['profit', 'net income', 'net loss', 'bottom line', 'earnings', 'profit margin'],
+      operatingIncome: ['operating income', 'operating profit', 'operating loss', 'EBIT', 'operating margin'],
+      expenses: ['expenses', 'costs', 'operating expenses', 'cost of sales', 'cost of revenue'],
+      assets: ['assets', 'total assets', 'current assets', 'cash', 'cash and equivalents'],
+      debt: ['debt', 'liabilities', 'total debt', 'borrowings', 'notes payable', 'bonds', 'senior notes']
+    };
+
+    this.timePeriods = {
+      latestQuarter: ['latest quarter', 'most recent quarter', 'last quarter', 'current quarter', 'this quarter'],
+      q1: ['Q1', 'first quarter', 'quarter 1', 'three months ended March'],
+      q2: ['Q2', 'second quarter', 'quarter 2', 'three months ended June'],
+      q3: ['Q3', 'third quarter', 'quarter 3', 'three months ended September'], 
+      q4: ['Q4', 'fourth quarter', 'quarter 4', 'three months ended December'],
+      annual: ['annual', 'yearly', 'year ended', 'full year', 'FY', 'fiscal year']
+    };
+  }
+
+  async preprocessQuery(originalQuery, company) {
+    const analysis = this.analyzeQuery(originalQuery);
+    const expandedQueries = this.generateExpandedQueries(originalQuery, analysis);
+    
+    return {
+      original: originalQuery,
+      analysis: analysis,
+      expandedQueries: expandedQueries
+    };
+  }
+
+  analyzeQuery(query) {
+    const queryLower = query.toLowerCase();
+    
+    const analysis = {
+      dataType: null,
+      timePeriod: null,
+      isFinancial: false
+    };
+
+    // Identify data type
+    for (const [category, terms] of Object.entries(this.financialTerms)) {
+      if (terms.some(term => queryLower.includes(term.toLowerCase()))) {
+        analysis.dataType = category;
+        analysis.isFinancial = true;
+        break;
+      }
+    }
+
+    // Identify time period
+    for (const [period, terms] of Object.entries(this.timePeriods)) {
+      if (terms.some(term => queryLower.includes(term.toLowerCase()))) {
+        analysis.timePeriod = period;
+        break;
+      }
+    }
+
+    return analysis;
+  }
+
+  generateExpandedQueries(originalQuery, analysis) {
+    const queries = [originalQuery];
+    const currentYear = new Date().getFullYear();
+
+    if (!analysis.isFinancial) {
+      return queries;
+    }
+
+    // Generate SEC-specific variations
+    if (analysis.dataType === 'revenue') {
+      if (analysis.timePeriod === 'latestQuarter' || analysis.timePeriod === 'q1') {
+        queries.push(
+          `total revenue three months ended March ${currentYear}`,
+          `net revenue quarterly ${currentYear}`,
+          `consolidated statements operations revenue`
+        );
+      }
+    }
+
+    if (analysis.dataType === 'profit') {
+      queries.push(
+        `net income loss three months ended`,
+        `consolidated statements operations net income`
+      );
+    }
+
+    if (analysis.dataType === 'operatingIncome') {
+      queries.push(
+        `operating income loss three months ended`,
+        `operating expenses operating income`
+      );
+    }
+
+    return [...new Set(queries)].slice(0, 5);
+  }
+
+  rankResults(results, analysis) {
+    return results.map(result => {
+      let score = result.score || 0;
+      
+      if (analysis.dataType && result.metadata?.content) {
+        const terms = this.financialTerms[analysis.dataType];
+        const matchCount = terms.filter(term => 
+          result.metadata.content.toLowerCase().includes(term.toLowerCase())
+        ).length;
+        score += matchCount * 0.1;
+      }
+
+      return { ...result, adjustedScore: score };
+    }).sort((a, b) => b.adjustedScore - a.adjustedScore);
+  }
+}
+
+// Enhanced search function
+async function enhancedSearchWithIntelligence(question, company) {
+  const queryIntelligence = new QueryIntelligence();
+  const queryAnalysis = await queryIntelligence.preprocessQuery(question, company);
+  
+  console.log(`🧠 Query Analysis: ${queryAnalysis.analysis.dataType || 'general'} / ${queryAnalysis.analysis.timePeriod || 'unspecified'}`);
+  console.log(`🔍 Generated ${queryAnalysis.expandedQueries.length} search variations`);
+
+  let allResults = [];
+  
+  for (let i = 0; i < Math.min(3, queryAnalysis.expandedQueries.length); i++) {
+    const expandedQuery = queryAnalysis.expandedQueries[i];
+    
+    try {
+      const queryEmbedding = await openai.embeddings.create({
+        model: 'text-embedding-ada-002',
+        input: expandedQuery,
+      });
+
+      const searchResponse = await index.query({
+        vector: queryEmbedding.data[0].embedding,
+        filter: { company: company },
+        topK: 3,
+        includeMetadata: true,
+      });
+
+      allResults.push(...searchResponse.matches);
+      
+    } catch (error) {
+      console.error(`❌ Error with query ${i + 1}:`, error.message);
+      continue;
+    }
+  }
+
+  const rankedResults = queryIntelligence.rankResults(allResults, queryAnalysis.analysis);
+  const uniqueResults = rankedResults.filter((result, index, self) => 
+    index === self.findIndex(r => r.id === result.id)
+  );
+
+  return uniqueResults.slice(0, 5);
+}
+
+// AI Response Generation
+async function generateAIResponse(documents, question, company) {
+  const context = documents.map(doc => {
+    return `Source: ${doc.metadata.source}\nContent: ${doc.metadata.content}`;
+  }).join('\n\n---\n\n');
+  
+  const systemPrompt = `You are a financial analyst. Provide accurate responses based ONLY on the provided SEC filing documents. Include specific numbers and dates when available. Cite sources appropriately.
+
+CONTEXT FROM SEC FILINGS:
+${context}`;
+
+  const userPrompt = `Answer this question about ${company}: ${question}`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-turbo',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      max_tokens: 1000,
+      temperature: 0.1,
+    });
+
+    return response.choices[0].message.content;
+    
+  } catch (error) {
+    console.error('❌ Error generating AI response:', error);
+    throw error;
+  }
+}
+
+// ROUTES
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Get companies
+app.get('/api/companies', async (req, res) => {
+  try {
+    const stats = await index.describeIndexStats();
+    res.json({
+      totalVectors: stats.totalVectorCount,
+      companies: ['DEMO', 'AAPL', 'SNOW', 'CRWV'],
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch companies' });
+  }
+});
+
+// Enhanced chat endpoint
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { question, company } = req.body;
+    
+    if (!question || !company) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        message: 'Both question and company are required' 
+      });
+    }
+
+    console.log('=== NEW CHAT REQUEST ===');
+    console.log(`💬 Question: "${question}"`);
+    console.log(`🏢 Company: "${company}"`);
+
+    const enhancedResults = await enhancedSearchWithIntelligence(question, company);
+    
+    if (enhancedResults.length === 0) {
+      return res.json({
+        answer: `I couldn't find any relevant information about ${company} in the database.`,
+        sources: [],
+        confidence: 'low'
+      });
+    }
+
+    console.log(`📄 Found ${enhancedResults.length} relevant documents`);
+
+    const aiResponse = await generateAIResponse(enhancedResults, question, company);
+    const sources = [...new Set(enhancedResults.map(doc => doc.metadata.source))];
+    
+    console.log('✅ Chat request completed successfully');
+
+    res.json({
+      answer: aiResponse,
+      sources: sources,
+      confidence: 'high'
+    });
+
+  } catch (error) {
+    console.error('❌ Error in chat endpoint:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'Something went wrong processing your request'
+    });
+  }
+});
+
+// Start server
+const PORT = process.env.PORT || 3000;
+
+async function startServer() {
+  try {
+    await initializePinecone();
+    
+    app.listen(PORT, () => {
+      console.log('🚀 SimplifyIR Server Starting...');
+      console.log('📊 Query Intelligence System Enabled...');
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📊 Connected to Pinecone index: simplifyir`);
+      console.log('✅ Enhanced search capabilities enabled');
+      console.log('');
+      console.log('Available endpoints:');
+      console.log(`  GET  http://localhost:${PORT}/api/health`);
+      console.log(`  GET  http://localhost:${PORT}/api/companies`);
+      console.log(`  POST http://localhost:${PORT}/api/chat`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
