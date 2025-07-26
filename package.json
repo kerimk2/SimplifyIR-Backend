@@ -1,22 +1,18 @@
 {
-  "name": "ai-investor-relations-backend",
+  "name": "simplifyir-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "@pinecone-database/pinecone": "^6.1.1",
-    "axios": "^1.10.0",
-    "cheerio": "^1.1.2",
+    "express": "^4.18.2",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.0",
-    "express": "^5.1.0",
-    "openai": "^5.10.1",
-    "pdf-parse": "^1.1.1"
+    "multer": "^1.4.5-lts.1",
+    "openai": "^4.20.1",
+    "@pinecone-database/pinecone": "^1.1.0",
+    "pdf-parse": "^1.1.1",
+    "mammoth": "^1.6.0",
+    "dotenv": "^16.3.1"
   }
 }
