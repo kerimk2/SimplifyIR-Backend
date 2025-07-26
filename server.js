@@ -704,14 +704,23 @@ app.get('/api/health', (req, res) => {
 // Get companies
 app.get('/api/companies', async (req, res) => {
   try {
+    console.log('🔍 Attempting to describe index stats...');
     const stats = await index.describeIndexStats();
+    console.log('✅ Index stats retrieved:', stats);
+    
     res.json({
       totalVectors: stats.totalVectorCount,
       companies: ['DEMO', 'AAPL', 'SNOW', 'CRWV'],
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch companies' });
+    console.error('❌ Error in companies endpoint:', error);
+    console.error('❌ Error details:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to fetch companies',
+      details: error.message 
+    });
   }
 });
 
