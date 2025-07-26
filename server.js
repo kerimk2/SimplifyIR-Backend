@@ -75,9 +75,9 @@ const upload = multer({
 // Initialize Pinecone connection
 async function initializePinecone() {
   try {
-    // For serverless indexes, use the index name directly
-    index = pinecone.Index('simplifyir');
-    console.log('✅ Connected to Pinecone serverless index: simplifyir');
+    // For serverless indexes, specify the exact hostname from Pinecone dashboard
+    index = pinecone.Index('simplifyir', 'https://simplifyir-4ckub9f.svc.aped-4627-b74a.pinecone.io');
+    console.log('✅ Connected to Pinecone serverless index with explicit hostname');
   } catch (error) {
     console.error('❌ Failed to connect to Pinecone:', error);
     process.exit(1);
