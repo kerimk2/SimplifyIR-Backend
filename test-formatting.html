@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Formatting</title>
+    <style>
+        .message-content {
+            max-width: 80%;
+            padding: 16px 20px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            background: white;
+            color: #333;
+            border: 1px solid #e1e5e9;
+            margin: 20px;
+        }
+        
+        .message-content p {
+            margin: 0 0 12px 0;
+        }
+        
+        .message-content strong {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .message-content br {
+            display: block;
+            margin: 6px 0;
+            content: "";
+        }
+    </style>
+</head>
+<body>
+    <div class="message-content" id="testContent">
+        Loading...
+    </div>
+
+    <script>
+        async function testFormatting() {
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: "What are CoreWeave's recent partnerships?",
+                        company: "CRWV"
+                    })
+                });
+
+                const data = await response.json();
+                const content = data.answer;
+                
+                console.log('Raw content:', JSON.stringify(content));
+                
+                // Apply the same formatting as in the chat
+                let formattedContent = content
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\n\n/g, '</p><p style="margin-bottom: 12px;">')
+                    .replace(/\n/g, '<br>')
+                    .replace(/(\d+\.\s)/g, '<br><strong>$1</strong>')
+                    .replace(/•\s/g, '<br>• ')
+                    .replace(/^/, '<p style="margin-bottom: 12px;">')
+                    .replace(/$/, '</p>')
+                    .replace(/<p[^>]*><\/p>/g, '');
+                
+                console.log('Formatted content:', JSON.stringify(formattedContent));
+                document.getElementById('testContent').innerHTML = formattedContent;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('testContent').innerText = 'Error: ' + error.message;
+            }
+        }
+
+        testFormatting();
+    </script>
+</body>
+</html>

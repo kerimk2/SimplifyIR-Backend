@@ -250,14 +250,9 @@
             <div class="form-group">
                 <label for="documentType">Document Type:</label>
                 <select id="documentType" name="documentType">
-                    <option value="earnings-call">Earnings Call Transcript</option>
-                    <option value="earnings-presentation">Earnings Presentation</option>
-                    <option value="investor-deck">Investor Deck</option>
-                    <option value="analyst-report">Analyst Report</option>
-                    <option value="press-release">Press Release</option>
-                    <option value="internal-memo">Internal Memo</option>
-                    <option value="board-presentation">Board Presentation</option>
-                    <option value="strategic-plan">Strategic Plan</option>
+                    <option value="transcripts">Transcripts</option>
+                    <option value="presentations">Presentations</option>
+                    <option value="external-research">External Research</option>
                     <option value="other">Other</option>
                 </select>
             </div>
@@ -265,6 +260,30 @@
             <div class="form-group">
                 <label for="description">Description (Optional):</label>
                 <textarea id="description" name="description" rows="3" placeholder="Brief description of the documents..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" id="incognitoMode" name="incognitoMode" style="margin-right: 8px; margin-top: 0;">
+                    <span>Incognito Upload (Custom Source Labeling)</span>
+                </label>
+                <div id="customSourceSection" style="display: none; margin-top: 15px;">
+                    <label for="customSource">Custom Source Label:</label>
+                    <input type="text" id="customSource" name="customSource" placeholder="e.g., Industry Report, Market Analysis, Third-Party Research">
+                    <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
+                        This will replace the default source attribution with your custom label.
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" id="sellSideMode" name="sellSideMode" style="margin-right: 8px; margin-top: 0;">
+                    <span>Sell-Side Research Anonymization</span>
+                </label>
+                <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
+                    Automatically anonymizes sell-side research reports by removing analyst names, firm identifiers, and contact information while preserving analysis content.
+                </div>
             </div>
 
             <div class="form-group">
@@ -308,6 +327,14 @@
         const resultContainer = document.getElementById('resultContainer');
 
         let selectedFiles = [];
+
+        // Incognito mode toggle
+        const incognitoMode = document.getElementById('incognitoMode');
+        const customSourceSection = document.getElementById('customSourceSection');
+        
+        incognitoMode.addEventListener('change', () => {
+            customSourceSection.style.display = incognitoMode.checked ? 'block' : 'none';
+        });
 
         // Upload zone click
         uploadZone.addEventListener('click', () => {
@@ -413,6 +440,9 @@
             formData.append('company', document.getElementById('company').value);
             formData.append('documentType', document.getElementById('documentType').value);
             formData.append('description', document.getElementById('description').value);
+            formData.append('incognitoMode', document.getElementById('incognitoMode').checked);
+            formData.append('customSource', document.getElementById('customSource').value);
+            formData.append('sellSideMode', document.getElementById('sellSideMode').checked);
 
             selectedFiles.forEach(file => {
                 formData.append('documents', file);

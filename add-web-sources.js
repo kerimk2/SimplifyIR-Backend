@@ -1,6 +1,6 @@
 require('dotenv').config();
 const OpenAI = require('openai');
-const { Pinecone } = require('@pinecone-database/pinecone');
+const PineconeREST = require('./pinecone-rest');
 const cheerio = require('cheerio');
 
 // Initialize APIs
@@ -8,8 +8,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const pinecone = new Pinecone({
+const pinecone = new PineconeREST({
   apiKey: process.env.PINECONE_API_KEY,
+  environment: process.env.PINECONE_ENVIRONMENT,
 });
 
 // Configuration
@@ -25,11 +26,11 @@ class WebSourcesProcessor {
   }
 
   async initialize() {
-    console.log('[dotenv@17.2.0] injecting env (4) from .env (tip: ⚙️  override existing env vars with { override: true })');
+    console.log('🌐 Web Sources Processor Starting...');
     console.log('');
     
     try {
-      this.index = pinecone.Index('simplifyir');
+      // Use the REST client directly
       console.log('✅ Connected to Pinecone index: simplifyir');
     } catch (error) {
       console.error('❌ Failed to connect to Pinecone:', error.message);
@@ -340,7 +341,7 @@ class WebSourcesProcessor {
       let retries = 0;
       while (retries < MAX_RETRIES) {
         try {
-          await this.index.upsert(batch);
+          await pinecone.upsert(batch);
           break;
         } catch (error) {
           retries++;

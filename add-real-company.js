@@ -1,7 +1,7 @@
-const { Pinecone } = require('@pinecone-database/pinecone');
 const OpenAI = require('openai');
 const axios = require('axios');
 const dotenv = require('dotenv');
+const PineconeREST = require('./pinecone-rest');
 
 // Load environment variables
 dotenv.config();
@@ -11,8 +11,9 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
-const pinecone = new Pinecone({
-    apiKey: process.env.PINECONE_API_KEY
+const pinecone = new PineconeREST({
+    apiKey: process.env.PINECONE_API_KEY,
+    environment: process.env.PINECONE_ENVIRONMENT
 });
 
 // Generate embeddings
@@ -163,7 +164,7 @@ async function addDocumentToDatabase(content, company, docType, source) {
     try {
         console.log(`📄 Adding ${source} to database for ${company}...`);
         
-        const index = pinecone.index('simplifyir');
+        // Use the REST client directly
         
         // Split content into chunks
         const chunks = splitIntoChunks(content);
@@ -179,8 +180,8 @@ async function addDocumentToDatabase(content, company, docType, source) {
             // Create unique ID
             const id = `${company}-${docType}-${Date.now()}-${i}`;
             
-            // Store in Pinecone
-            await index.upsert([{
+            // Store in Pinecone using REST API
+            await pinecone.upsert([{
                 id: id,
                 values: embedding,
                 metadata: {
